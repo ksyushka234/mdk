@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16
+    container_name: study_planner_db
+    environment:
+      POSTGRES_DB: study_planner
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: study_planner_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - app_network
+
+  # НОВЫЙ СЕРВИС: OLLAMA (Локальный ИИ)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: study_planner_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          memory: 4G # Ограничиваем память, чтобы не повесить систему
+    networks:
+      - app_network
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  ollama_data: # Том для сохранения моделей ИИ
+
+networks:
+  app_network:
+    driver: bridge

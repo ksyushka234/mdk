@@ -1,0 +1,95 @@
+package ru.studyplanner.backend.service.impl;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import ru.studyplanner.backend.entity.Task;
+import ru.studyplanner.backend.entity.Employee;
+import ru.studyplanner.backend.repository.TaskRepository;
+import ru.studyplanner.backend.repository.EmployeeRepository;
+import ru.studyplanner.backend.dto.TaskCreateRequest;
+import ru.studyplanner.backend.service.TaskService;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class TaskServiceImpl implements TaskService {
+
+    private final TaskRepository taskRepository;
+    private final EmployeeRepository employeeRepository;
+
+    @Override
+    public Task updateTask(Long id, Task taskDetails) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Задача не найдена с ID: " + id));
+
+        task.setTitle(taskDetails.getTitle());
+        task.setDescription(taskDetails.getDescription());
+        task.setDeadlineAt(taskDetails.getDeadlineAt());
+        task.setStatus(taskDetails.getStatus());
+        task.setPriority(taskDetails.getPriority());
+
+        return taskRepository.save(task);
+    }
+
+    @Override
+    public void deleteTask(Long id) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Задача не найдена с ID: " + id));
+
+        taskRepository.delete(task);
+    }
+
+    @Override
+    public List<Task> getTasksByEmployee(Long userId) {
+        return taskRepository.findByAssignee_UserId(userId);
+    }
+
+    @Override
+    public List<Task> getAllTasks() {
+        return taskRepository.findAll();
+    }
+
+    @Override
+    @Transactional
+    public Task createTask(TaskCreateRequest request) {
+        // Находим сотрудника-исполнителя по его User ID
+        Employee assignee = employeeRepository.findByUserId(request.getAssigneeUserId())
+                .orElseThrow(() -> new RuntimeException("Сотрудник не найден"));
+
+        Task task = new Task();
+        task.setTitle(request.getTitle());
+        task.setDescription(request.getDescription());
+        task.setDeadlineAt(request.getDeadlineAt());
+        task.setPriority(request.getPriority());
+
+        task.setStatus("TODO");
+        task.setProgressPercent(0);
+        task.setAssignee(assignee);
+        // Здесь можно установить автора (менеджера), если передашь его ID в запросе
+
+        return taskRepository.save(task);
+    }
+
+    @Override
+    @Transactional
+    public Task updateTaskStatus(Long taskId, String status, Long userId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Задача не найдена"));
+
+        // Простая проверка: может менять статус только тот, кому назначена задача
+        if (!task.getAssignee().getUserId().equals(userId)) {
+            throw new RuntimeException("Нет прав на изменение этой задачи");
+        }
+
+        task.setStatus(status);
+        if ("DONE".equals(status)) {
+            task.setCompletedAt(LocalDateTime.now());
+            task.setProgressPercent(100);
+        }
+
+        return taskRepository.save(task);
+    }
+}
