@@ -24,6 +24,9 @@ public class Task {
     @Column(name = "deadline_at", nullable = false)
     private LocalDateTime deadlineAt;
 
+    @Column(name = "start_date_at")
+    private LocalDateTime startDateAt;
+
     @Column(name = "status", nullable = false)
     private String status = "TODO";
 

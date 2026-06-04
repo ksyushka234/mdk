@@ -41,8 +41,16 @@ function TaskList({
 
       {/* Строки задач */}
       {tasks.length === 0 ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#A5ADBA' }}>
-          Нет задач для отображения
+        <div style={{
+          padding: '60px 20px', textAlign: 'center', color: '#A5ADBA',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
+        }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#DFE1E6" strokeWidth="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <div style={{fontSize: '14px', fontWeight: '500'}}>Ничего не найдено</div>
+          <div style={{fontSize: '12px'}}>Попробуйте изменить фильтры или поисковый запрос</div>
         </div>
       ) : (
         tasks.map((task, index) => {

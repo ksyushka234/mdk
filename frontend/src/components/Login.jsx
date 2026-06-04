@@ -9,38 +9,42 @@ function Login() {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      // Проверь, какой эндпоинт у тебя на бэкенде: /auth/login или просто /login
-      const res = await apiClient.post('/auth/login', { login, password });
+    const handleLogin = async (e) => {
+      e.preventDefault();
+      try {
+        // Проверь, какой эндпоинт у тебя на бэкенде: /auth/login или просто /login
+        const res = await apiClient.post('/auth/login', { login, password });
 
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('role', res.data.role);
-      localStorage.setItem('login', res.data.login);
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('role', res.data.role);
+        localStorage.setItem('login', res.data.login);
 
-       try {
-            const payload = JSON.parse(atob(res.data.token.split('.')[1]));
-            // Обычно ID лежит в поле 'sub' или 'id'. Проверь свой токен!
-            const userId = payload.sub || payload.id || payload.userId;
-            if (userId) {
-              localStorage.setItem('userId', String(userId));
-            } else {
-              console.warn("Не удалось найти userId в токене. Payload:", payload);
-              // Временный фолбэк, чтобы не ломалось прямо сейчас
-              localStorage.setItem('userId', '1');
-            }
-          } catch (decodeErr) {
-            console.error("Ошибка декодирования токена:", decodeErr);
-            localStorage.setItem('userId', '1');
-          }
+      try {
+        const payload = JSON.parse(atob(res.data.token.split('.')[1]));
+        console.log("Payload токена:", payload);
 
-      toast.success('Добро пожаловать!');
-      navigate('/dashboard');
-    } catch (err) {
-      toast.error('Неверный логин или пароль');
-    }
-  };
+        // Ищем ID во всех возможных вариантах написания
+        // В твоем токене поле называется просто 'id'
+        const userId = payload.id || payload.sub || payload.userId || payload.user_id;
+
+        if (userId) {
+          localStorage.setItem('userId', String(userId));
+          console.log("✅ userId сохранен:", userId);
+        } else {
+          console.warn("⚠️ ID действительно не найден. Payload:", payload);
+          localStorage.setItem('userId', '1');
+        }
+      } catch (decodeErr) {
+        console.error("❌ Ошибка декодирования:", decodeErr);
+        localStorage.setItem('userId', '1');
+      }
+
+        toast.success('Добро пожаловать!');
+        navigate('/dashboard');
+      } catch (err) {
+        toast.error('Неверный логин или пароль');
+      }
+    };
 
   // СТИЛИ В СТИЛЕ APPLE
   const styles = {

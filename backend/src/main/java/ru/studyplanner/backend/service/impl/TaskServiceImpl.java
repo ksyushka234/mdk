@@ -8,6 +8,7 @@ import ru.studyplanner.backend.entity.Employee;
 import ru.studyplanner.backend.repository.TaskRepository;
 import ru.studyplanner.backend.repository.EmployeeRepository;
 import ru.studyplanner.backend.dto.TaskCreateRequest;
+import ru.studyplanner.backend.dto.TaskStatsDto; // <-- ДОБАВЛЕН ИМПОРТ DTO
 import ru.studyplanner.backend.service.TaskService;
 
 import java.time.LocalDateTime;
@@ -28,6 +29,8 @@ public class TaskServiceImpl implements TaskService {
         task.setTitle(taskDetails.getTitle());
         task.setDescription(taskDetails.getDescription());
         task.setDeadlineAt(taskDetails.getDeadlineAt());
+        task.setStartDateAt(taskDetails.getStartDateAt());
+
         task.setStatus(taskDetails.getStatus());
         task.setPriority(taskDetails.getPriority());
 
@@ -55,7 +58,6 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Transactional
     public Task createTask(TaskCreateRequest request) {
-        // Находим сотрудника-исполнителя по его User ID
         Employee assignee = employeeRepository.findByUserId(request.getAssigneeUserId())
                 .orElseThrow(() -> new RuntimeException("Сотрудник не найден"));
 
@@ -65,10 +67,11 @@ public class TaskServiceImpl implements TaskService {
         task.setDeadlineAt(request.getDeadlineAt());
         task.setPriority(request.getPriority());
 
+        task.setStartDateAt(request.getStartDateAt());
+
         task.setStatus("TODO");
         task.setProgressPercent(0);
         task.setAssignee(assignee);
-        // Здесь можно установить автора (менеджера), если передашь его ID в запросе
 
         return taskRepository.save(task);
     }
@@ -79,7 +82,6 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Задача не найдена"));
 
-        // Простая проверка: может менять статус только тот, кому назначена задача
         if (!task.getAssignee().getUserId().equals(userId)) {
             throw new RuntimeException("Нет прав на изменение этой задачи");
         }
@@ -91,5 +93,34 @@ public class TaskServiceImpl implements TaskService {
         }
 
         return taskRepository.save(task);
+    }
+
+
+    @Override
+    public TaskStatsDto getStats() {
+        List<Task> allTasks = taskRepository.findAll();
+
+        long total = allTasks.size();
+        long done = allTasks.stream().filter(t -> "DONE".equals(t.getStatus())).count();
+        long inProgress = allTasks.stream().filter(t -> "IN_PROGRESS".equals(t.getStatus())).count();
+        long todo = allTasks.stream().filter(t -> "TODO".equals(t.getStatus())).count();
+
+        LocalDateTime now = LocalDateTime.now();
+        long overdue = allTasks.stream()
+                .filter(t -> t.getDeadlineAt() != null
+                        && t.getDeadlineAt().isBefore(now)
+                        && !"DONE".equals(t.getStatus()))
+                .count();
+
+        int percentDone = total > 0 ? (int) Math.round((done * 100.0) / total) : 0;
+
+        return TaskStatsDto.builder()
+                .total(total)
+                .done(done)
+                .inProgress(inProgress)
+                .todo(todo)
+                .overdue(overdue)
+                .percentDone(percentDone)
+                .build();
     }
 }

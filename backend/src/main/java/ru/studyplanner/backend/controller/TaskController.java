@@ -3,6 +3,7 @@ package ru.studyplanner.backend.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.studyplanner.backend.dto.TaskStatsDto;
 import ru.studyplanner.backend.entity.Task;
 import ru.studyplanner.backend.service.TaskService;
 import ru.studyplanner.backend.dto.TaskCreateRequest;
@@ -40,6 +41,12 @@ public class TaskController {
     @GetMapping
     public List<Task> getAllTasks() {
         return taskService.getAllTasks();
+    }
+
+    // Получить статистику по задачам
+    @GetMapping("/stats")
+    public ResponseEntity<TaskStatsDto> getStats() {
+        return ResponseEntity.ok(taskService.getStats());
     }
 
     // Создать задачу

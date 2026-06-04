@@ -1,5 +1,6 @@
 package ru.studyplanner.backend.service;
 
+import ru.studyplanner.backend.dto.TaskStatsDto;
 import ru.studyplanner.backend.entity.Task;
 import ru.studyplanner.backend.dto.TaskCreateRequest;
 import java.util.List;
@@ -10,5 +11,6 @@ public interface TaskService {
     Task createTask(TaskCreateRequest request);
     Task updateTaskStatus(Long taskId, String status, Long userId);
     Task updateTask(Long id, Task taskDetails);
+    TaskStatsDto getStats();
     void deleteTask(Long id);
 }

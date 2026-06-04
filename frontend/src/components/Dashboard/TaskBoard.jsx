@@ -49,7 +49,7 @@ const TaskCard = ({ task, role, onEdit, getPriorityColor, getStatusColor, setDel
           </div>
         </div>
       )}
-      {/* 👆 КОНЕЦ ПРОГРЕСС-БАРА 👆 */}
+      {/*  КОНЕЦ ПРОГРЕСС-БАРА  */}
 
       {/* Нижняя панель: теги + исполнитель + удаление */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#6B778C' }}>
@@ -184,10 +184,22 @@ function TaskBoard({ tasks, role, setEditingTask, styles, getPriorityColor, getS
 
             {tasks.filter(t => t.status === status.id).length === 0 && (
               <div style={{
-                textAlign: 'center', padding: '20px',
-                color: '#A5ADBA', fontSize: '13px', fontStyle: 'italic'
+                textAlign: 'center', padding: '40px 20px', color: '#A5ADBA',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
               }}>
-                Нет задач
+                {/* Иконка пустой папки */}
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#DFE1E6" strokeWidth="1.5">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+
+                <div>
+                  <div style={{fontSize: '14px', fontWeight: '500', marginBottom: '4px'}}>Задач пока нет</div>
+                  {role === 'MANAGER' ? (
+                    <div style={{fontSize: '12px'}}>Нажмите «+ Создать», чтобы добавить первую задачу</div>
+                  ) : (
+                    <div style={{fontSize: '12px'}}>Менеджер еще не назначил вам задачи</div>
+                  )}
+                </div>
               </div>
             )}
           </div>

@@ -64,7 +64,7 @@ function EditTaskModal({ task, onSave, onCancel, styles }) {
             <label style={{ fontSize: '11px', fontWeight: '600', color: '#5E6C84', marginBottom: '6px', display: 'block', textTransform: 'uppercase' }}>Начало</label>
             <input
               type="datetime-local"
-              value={toInputFormat(formData.startDate)}
+              value={toInputFormat(formData.startDateAt)}
               onChange={e => handleChange('startDateAt', e.target.value)}
               style={{...styles.input, width: '100%', boxSizing: 'border-box'}}
             />

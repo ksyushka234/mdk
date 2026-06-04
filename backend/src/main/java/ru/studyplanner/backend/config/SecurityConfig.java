@@ -3,6 +3,7 @@ package ru.studyplanner.backend.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -35,13 +36,26 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        // 1. Публичные эндпоинты (доступны без токена)
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/departments").permitAll()
+
+                        // 2. Swagger и документация
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/swagger-resources/**").permitAll()
                         .requestMatchers("/webjars/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/api/tasks/**").authenticated() // Разрешаем всем залогиненным // <-- ВАЖНО!
+
+                        // 3. Управление отделами - ТОЛЬКО МЕНЕДЖЕР (POST, PUT, DELETE)
+                        .requestMatchers("/api/departments/**").hasRole("MANAGER")
+
+                        // 4. Задачи - любой авторизованный пользователь
+                        // Задачи: чтение - всем авторизованным, изменение/создание - менеджеру
+                        .requestMatchers(HttpMethod.GET, "/api/tasks/**").authenticated()
+                        .requestMatchers("/api/tasks/**").hasAnyRole("MANAGER", "EMPLOYEE")
+
+                        // 5. Всё остальное требует авторизации
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

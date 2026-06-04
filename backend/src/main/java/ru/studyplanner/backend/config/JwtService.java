@@ -25,7 +25,19 @@ public class JwtService {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
+    public String generateTokenWithId(Long userId, UserDetails userDetails) {
+        Map<String, Object> extraClaims = new java.util.HashMap<>();
+        extraClaims.put("id", userId); // <-- Кладем ID в токен
 
+        return Jwts
+                .builder()
+                .claims(extraClaims)
+                .subject(userDetails.getUsername())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // 24 часа
+                .signWith(getSignInKey())
+                .compact();
+    }
     public String generateToken(UserDetails userDetails) {
         return generateToken(Map.of(), userDetails);
     }

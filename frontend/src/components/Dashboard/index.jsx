@@ -8,6 +8,7 @@ import TaskList from './TaskList';
 import TimelineView from './TimelineView';
 import CreateTaskModal from './CreateTaskModal';
 import EditTaskModal from './EditTaskModal';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 function Dashboard() {
   // Стейты для редактирования отделов
@@ -59,14 +60,28 @@ function Dashboard() {
     if (activeView === 'reports') loadStats();
   }, [activeView]);
 
-  const loadTasks = async () => {
-    try {
-      const userId = localStorage.getItem('userId');
-      const url = role === 'MANAGER' ? '/tasks' : `/tasks/my-tasks?userId=${userId}`;
-      const res = await apiClient.get(url);
-      setTasks(res.data);
-    } catch (err) { console.error("Ошибка загрузки задач:", err); }
-  };
+const loadTasks = async () => {
+  try {
+    const userId = localStorage.getItem('userId');
+
+    // Проверяем, есть ли userId (иногда там лежит email вместо ID)
+    if (!userId || userId.includes('@')) {
+      console.warn("Некорректный userId в localStorage:", userId);
+      // Если userId - это email, пробуем взять из токена или используем заглушку
+      // В идеале нужно чинить Login.jsx, чтобы он сохранял именно ID
+    }
+
+    // ДОБАВЛЯЕМ /api/ В НАЧАЛО ПУТИ!
+    const url = role === 'MANAGER'
+      ? '/tasks'
+      : `/tasks/my-tasks?userId=${userId}`;
+
+    const res = await apiClient.get(url);
+    setTasks(res.data);
+  } catch (err) {
+    console.error("Ошибка загрузки задач:", err);
+  }
+};
 
   const loadEmployees = async () => {
     try {
@@ -129,6 +144,22 @@ function Dashboard() {
   const doneTasks = stats ? stats.done : tasks.filter(t => t.status === 'DONE').length;
   const inProgressTasks = stats ? stats.inProgress : tasks.filter(t => t.status === 'IN_PROGRESS').length;
   const overdueTasksLocal = overdueCount;
+
+// Данные для круговой диаграммы (Статусы) - ТЕПЕРЬ ИЗ СЕРВЕРА
+const statusData = stats ? [
+  { name: 'Новые', value: stats.todo || 0, color: '#6554C0' },
+  { name: 'В работе', value: stats.inProgress || 0, color: '#0052CC' },
+  { name: 'Готово', value: stats.done || 0, color: '#00875A' },
+] : [];
+
+// Данные для столбчатой диаграммы (Приоритеты)
+// Пока считаем локально, так как сервер не отдает разбивку по приоритетам.
+// Если задач > 1000, лучше добавить поле priorityStats в TaskStatsDto на бэкенде.
+const priorityData = tasks.length > 0 ? [
+  { name: 'Высокий', value: tasks.filter(t => t.priority === 'HIGH').length, color: '#DE350B' },
+  { name: 'Средний', value: tasks.filter(t => t.priority === 'MEDIUM').length, color: '#FF8B00' },
+  { name: 'Низкий', value: tasks.filter(t => t.priority === 'LOW').length, color: '#006644' },
+] : [];
 
   const handleCreateTask = async () => {
     try {
@@ -564,39 +595,59 @@ function Dashboard() {
         {/* РАЗДЕЛ ОТЧЁТЫ С КНОПКОЙ ЭКСПОРТА */}
         {activeView === 'reports' && (
           <div style={styles.card}>
-            {/* Заголовок и кнопка в одном ряду */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#172B4D' }}>Статистика выполнения задач</h3>
-
-              <button
-                onClick={handleExportCSV}
-                style={{
-                  ...styles.btnPrimary,
-                  background: '#006644',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  fontSize: '14px',
-                  color: 'white'
-                }}
-                onMouseEnter={(e) => e.target.style.background = '#0052CC'}
-                onMouseLeave={(e) => e.target.style.background = '#006644'}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
+              <button onClick={handleExportCSV} style={{...styles.btnPrimary, background: '#006644', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Скачать CSV
               </button>
             </div>
 
-            {/* Карточки статистики */}
+            {/* Графики */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+              {/* Круговая диаграмма: Статусы */}
+              <div style={{ background: '#F9FAFB', padding: '20px', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#5E6C84', textTransform: 'uppercase' }}>Распределение по статусам</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={statusData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2} dataKey="value">
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '8px', fontSize: '12px' }}>
+                  {statusData.map(item => (
+                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color }}></div>
+                      {item.name}: {item.value}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Столбчатая диаграмма: Приоритеты */}
+              <div style={{ background: '#F9FAFB', padding: '20px', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#5E6C84', textTransform: 'uppercase' }}>Задачи по приоритетам</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={priorityData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{fontSize: 12}} />
+                    <YAxis allowDecimals={false} tick={{fontSize: 12}} />
+                    <Tooltip cursor={{fill: 'transparent'}} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                      {priorityData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Старые карточки статистики (оставляем как дополнение) */}
             {stats ? (
               <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px'}}>
                 <div style={{background: '#F4F5F7', padding: '20px', borderRadius: '8px', textAlign: 'center'}}>
@@ -713,8 +764,16 @@ function Dashboard() {
               ))}
 
               {departments.length === 0 && (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#A5ADBA' }}>
-                  Отделы еще не созданы. Добавьте первый отдел выше!
+                <div style={{
+                  gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: '#A5ADBA',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
+                }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#DFE1E6" strokeWidth="1.5">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
+                  <div style={{fontSize: '14px', fontWeight: '500'}}>Отделы еще не созданы</div>
+                  <div style={{fontSize: '12px'}}>Добавьте первый отдел через форму выше</div>
                 </div>
               )}
             </div>
